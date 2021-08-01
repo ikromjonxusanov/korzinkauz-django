@@ -1,284 +1,264 @@
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-
-from rest_framework.parsers import JSONParser
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.decorators import api_view
-from rest_framework.viewsets import *
-from rest_framework import status
-
-
-from products.models import *
+from .forms import *
 from .serializers import *
-from .pagination import *
+from products.models import *
+from django.contrib.auth import authenticate, login, logout
 
-# viewset : list, create, retrive, update, protial_update, destory
+@csrf_exempt
+@api_view(['POST'])
+def user_login(request):
+    user = authenticate(
+        username=request.data.get('email'),
+        password=request.data.get('password')
+    )
+    if user is None:
+        return Response({
+            "ok":False,
+            "data":"Username and/or password incurrect"
+        })
+    login(request, user)
+    return Response({
+        'ok':True,
+    })
 
-class ProductsViewSet(ViewSet):
-    def list(self, request):
-        queryset = Product.objects.all()
-        serializer = ProductSerializer(queryset, many=True)
-        return Response(serializer.data)
-    def post(self, request):
-        serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
+@api_view(["DELETE"])
+def user_logout(request):
+    if request.user.is_authenticated:
+        logout(request)
+        return Response({
+            'ok':True
+        })
+
+
+@csrf_exempt
+@api_view(['GET', 'POST', "PUT", "DELETE"])
+def products(request, pk=None):
+    if request.method == "GET":
+        if pk:
+            queryset = get_object_or_404(Product, pk)
+            if queryset:
+                serializer = ProductGetFkObjectSerializer(queryset, many=False)
+                return Response(serializer.data)
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            queryset = Product.objects.all()
+            serializer = ProductGetFkObjectSerializer(queryset, many=True)
+            return Response(serializer.data)
+    elif request.method == "POST":
+        validated = ProductForm(data=request.data)
+        if validated.is_valid():
+            serializer = ProductSerializer(data=request.data)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def retrieve(self, request, pk=None):
-        queryset = Product.objects.all()
-        product = get_object_or_404(queryset, pk=pk)
-        print(product)
-        serializer = ProductSerializer(product)
-        return Response(serializer.data)
-
-# class ProductsViewSet(ModelViewSet):
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
-#     pagination_class = CustomPagination
-
-
-"""
-def object_or_404(model, pk):
-    try:
-        return model.objects.get(id=pk)
-    except:
-        return None
-
-
-@api_view(['GET'])
-def products_API(request):
-    products = Product.objects.all()
-    serializer = ProductSerializer(products, many=True)
-    return JsonResponse(serializer.data, safe=False)
-
-@api_view(['GET'])
-def product_API(request, pk):
-    product = object_or_404(Product, pk)
-    if product:
-        serializer = ProductSerializer(product, many=False)
-        return JsonResponse(serializer.data, safe=False)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
+            return Response(serializer.data)
+        else:
+            return Response({'ok':False, 'data':'The data could not be validated'})
+    elif request.method == "PUT":
+        if pk:
+            queryset = get_object_or_404(Product, pk)
+            if queryset:
+                validated = ProductForm(instance=queryset, data=request.data)
+                if validated.is_valid():
+                    serializer = ProductSerializer(instance=queryset, data=request.data)
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response({'ok':False, 'data':'The data could not be validated'})
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            return Response({"ok": False, 'data': "Not found object id"})
+    elif request.method == "DELETE":
+        queryset = get_object_or_404(Product, pk)
+        if queryset:
+            queryset.delete()
+            return Response({"deleted object": True})
+        else:
+            return Response({"ok": False, 'data': "The information in the id you provided is not available"})
 
 @csrf_exempt
-@api_view(['POST'])
-def product_create_API(request):
-    serializer = ProductSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    
-    return JsonResponse(serializer.data)
-
-@csrf_exempt
-@api_view(['POST'])
-def product_update_API(request, pk):
-    product = object_or_404(Product, pk)
-    if product:
-        serializer = ProductSerializer(instance=product, data=request.data)
-        if serializer.is_valid():
+@api_view(['GET', 'POST', "PUT", "DELETE"])
+def categories(request, pk=None):
+    if request.method == "GET":
+        if pk:
+            queryset = get_object_or_404(Category, pk)
+            if queryset:
+                serializer = CategorySerializer(queryset, many=False)
+                return Response(serializer.data)
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            queryset = Category.objects.all()
+            serializer = CategorySerializer(queryset, many=True)
+            return Response(serializer.data)
+    elif request.method == "POST":
+        validated = CategoryForm(data=request.data)
+        if validated.is_valid():
+            serializer = CategorySerializer(data=request.data)
             serializer.save()
-        return JsonResponse(serializer.data)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
+            return Response(serializer.data)
+        else:
+            return Response({'ok': False, 'data': 'The data could not be validated'})
+    elif request.method == "PUT":
+        if pk:
+            queryset = get_object_or_404(Category, pk)
+            if queryset:
+                validated = CategoryForm(instance=queryset, data=request.data)
+                if validated.is_valid():
+                    serializer = CategorySerializer(instance=queryset, data=request.data)
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response({'ok': False, 'data': 'The data could not be validated'})
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            return Response({"ok": False, 'data': "Not found object id"})
+    elif request.method == "DELETE":
+        queryset = get_object_or_404(Category, pk)
+        if queryset:
+            queryset.delete()
+            return Response({"deleted object": True})
+        else:
+            return Response({"ok": False, 'data': "The information in the id you provided is not available"})
 
 @csrf_exempt
-@api_view(['DELETE'])
-def product_delete_API(request, pk):
-    product = object_or_404(Product, pk)
-    if product:
-        product.delete()
-        return JsonResponse({"deleted product":True})
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-        
-@api_view(['GET'])
-def categorys_API(request):
-    category = Category.objects.all()
-    serializer = CategorySerializer(category, many=True)
-    return JsonResponse(serializer.data, safe=False)
-
-@api_view(['GET'])
-def category_API(request, pk):
-    category = object_or_404(Category, pk)
-    if category:
-        serializer = CategorySerializer(category, many=False)
-        return JsonResponse(serializer.data, safe=False)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-
-@csrf_exempt
-@api_view(['POST'])
-def category_create_API(request):
-    serializer = CategorySerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    
-    return JsonResponse(serializer.data)
-
-@csrf_exempt
-@api_view(['POST'])
-def category_update_API(request, pk):
-    category = object_or_404(Category, pk)
-    if category:
-        serializer = CategorySerializer(instance=category, data=request.data)
-        if serializer.is_valid():
+@api_view(['GET', 'POST', "PUT", "DELETE"])
+def statuses(request, pk=None):
+    if request.method == "GET":
+        if pk:
+            queryset = get_object_or_404(Status, pk)
+            if queryset:
+                serializer = StatusSerializer(queryset, many=False)
+                return Response(serializer.data)
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            queryset = Status.objects.all()
+            serializer = StatusSerializer(queryset, many=True)
+            return Response(serializer.data)
+    elif request.method == "POST":
+        validated = StatusForm(data=request.data)
+        if validated.is_valid():
+            serializer = StatusSerializer(data=request.data)
             serializer.save()
-        return JsonResponse(serializer.data)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
+            return Response(serializer.data)
+        else:
+            return Response({'ok': False, 'data': 'The data could not be validated'})
+    elif request.method == "PUT":
+        if pk:
+            queryset = get_object_or_404(Status, pk)
+            if queryset:
+                validated = StatusForm(instance=queryset, data=request.data)
+                if validated.is_valid():
+                    serializer = StatusSerializer(instance=queryset, data=request.data)
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response({'ok': False, 'data': 'The data could not be validated'})
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            return Response({"ok": False, 'data': "Not found object id"})
+    elif request.method == "DELETE":
+        queryset = get_object_or_404(Status, pk)
+        if queryset:
+            queryset.delete()
+            return Response({"deleted object": True})
+        else:
+            return Response({"ok": False, 'data': "The information in the id you provided is not available"})
 
 @csrf_exempt
-@api_view(['DELETE'])
-def category_delete_API(request, pk):
-    category = object_or_404(Category, pk)
-    if category:
-        category.delete()
-        return JsonResponse({"deleted category":True})
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-        
-@api_view(['GET'])
-def customers_API(request):
-    customers = Customer.objects.all()
-    serializer = CustomerSerializer(customers, many=True)
-    return JsonResponse(serializer.data, safe=False)
-
-@api_view(['GET'])
-def customer_API(request, pk):
-    customer = object_or_404(Customer, pk)
-    if customer:
-        serializer = CustomerSerializer(customer, many=False)
-        return JsonResponse(serializer.data, safe=False)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-
-@csrf_exempt
-@api_view(['POST'])
-def customer_create_API(request):
-    serializer = CustomerSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    
-    return JsonResponse(serializer.data)
-
-@csrf_exempt
-@api_view(['POST'])
-def customer_update_API(request, pk):
-    customer = object_or_404(Customer, pk)
-    if customer:
-        serializer = CustomerSerializer(instance=customer, data=request.data)
-        if serializer.is_valid():
+@api_view(['GET', 'POST', "PUT", "DELETE"])
+def customers(request, pk=None):
+    if request.method == "GET":
+        if pk:
+            queryset = get_object_or_404(Customer, pk)
+            if queryset:
+                serializer = CustomerGetFkObjectSerializer(queryset, many=False)
+                return Response(serializer.data)
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            queryset = Product.objects.all()
+            serializer = ProductGetFkObjectSerializer(queryset, many=True)
+            return Response(serializer.data)
+    elif request.method == "POST":
+        validated = CustomerForm(data=request.data)
+        if validated.is_valid():
+            serializer = CustomerSerializer(data=request.data)
             serializer.save()
-        return JsonResponse(serializer.data)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
+            return Response(serializer.data)
+        else:
+            return Response({'ok':False, 'data':'The data could not be validated'})
+    elif request.method == "PUT":
+        if pk:
+            queryset = get_object_or_404(Customer, pk)
+            if queryset:
+                validated = CustomerForm(instance=queryset, data=request.data)
+                if validated.is_valid():
+                    serializer = CustomerSerializer(instance=queryset, data=request.data)
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response({'ok':False, 'data':'The data could not be validated'})
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            return Response({"ok": False, 'data': "Not found object id"})
+    elif request.method == "DELETE":
+        queryset = get_object_or_404(Customer, pk)
+        if queryset:
+            queryset.delete()
+            return Response({"deleted object": True})
+        else:
+            return Response({"ok": False, 'data': "The information in the id you provided is not available"})
 
 @csrf_exempt
-@api_view(['DELETE'])
-def customer_delete_API(request, pk):
-    customer = object_or_404(Customer, pk)
-    if customer:
-        customer.delete()
-        return JsonResponse({"deleted customer":True})
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-        
-@api_view(['GET'])
-def statuses_API(request):
-    statuses = Status.objects.all()
-    serializer = StatusSerializer(statuses, many=True)
-    return JsonResponse(serializer.data, safe=False)
-
-@api_view(['GET'])
-def status_API(request, pk): 
-    status = object_or_404(Status, pk)
-    if status:
-        serializer = StatusSerializer(status, many=False)
-        return JsonResponse(serializer.data, safe=False)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-
-@csrf_exempt
-@api_view(['POST'])
-def status_create_API(request):
-    serializer = StatusSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    
-    return JsonResponse(serializer.data)
-
-@csrf_exempt
-@api_view(['POST'])
-def status_update_API(request, pk):
-    status = object_or_404(Status, pk)
-    if status:
-        serializer = StatusSerializer(instance=status, data=request.data)
-        if serializer.is_valid():
+@api_view(['GET', 'POST', "PUT", "DELETE"])
+def orders(request, pk=None):
+    if request.method == "GET":
+        if pk:
+            queryset = get_object_or_404(Order, pk)
+            if queryset:
+                serializer = OrderGetFkObjectSerializer(queryset, many=False)
+                return Response(serializer.data)
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            queryset = Order.objects.all()
+            serializer = OrderGetFkObjectSerializer(queryset, many=True)
+            return Response(serializer.data)
+    elif request.method == "POST":
+        validated = OrderForm(data=request.data)
+        if validated.is_valid():
+            serializer = OrderSerializer(data=request.data)
             serializer.save()
-        return JsonResponse(serializer.data)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-
-@csrf_exempt
-@api_view(['DELETE'])
-def status_delete_API(request, pk):
-    status = object_or_404(Status, pk)
-    if status:
-        status.delete()
-        return JsonResponse({"deleted status":True})
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-        
-@api_view(['GET'])
-def orders_API(request):
-    orders = Order.objects.all()
-    serializer = OrderSerializer(orders, many=True)
-    return JsonResponse(serializer.data, safe=False)
-
-@api_view(['GET'])
-def order_API(request, pk):
-    order = object_or_404(Order, pk)
-    if order:
-        serializer = StatusSerializer(order, many=False)
-        return JsonResponse(serializer.data, safe=False)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-
-@csrf_exempt
-@api_view(['POST'])
-def order_create_API(request):
-    serializer = StatusSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    
-    return JsonResponse(serializer.data)
-
-@csrf_exempt
-@api_view(['POST'])
-def order_update_API(request, pk):
-    order = object_or_404(Order, pk)
-    if order:
-        serializer = StatusSerializer(instance=order, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-        return JsonResponse(serializer.data)
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-
-@csrf_exempt
-@api_view(['DELETE'])
-def order_delete_API(request, pk):
-    order = object_or_404(Order, pk)
-    if order:
-        order.delete()
-        return JsonResponse({"deleted order":True})
-    else:
-        return HttpResponse("The information in the id you provided is not available")
-"""
-
-
-
+            return Response(serializer.data)
+        else:
+            return Response({'ok':False, 'data':'The data could not be validated'})
+    elif request.method == "PUT":
+        if pk:
+            queryset = get_object_or_404(Order, pk)
+            if queryset:
+                validated = OrderForm(instance=queryset, data=request.data)
+                if validated.is_valid():
+                    serializer = OrderSerializer(instance=queryset, data=request.data)
+                    serializer.save()
+                    return Response(serializer.data)
+                else:
+                    return Response({'ok':False, 'data':'The data could not be validated'})
+            else:
+                return Response({"ok": False, 'data': "The information in the id you provided is not available"})
+        else:
+            return Response({"ok": False, 'data': "Not found object id"})
+    elif request.method == "DELETE":
+        queryset = get_object_or_404(Order, pk)
+        if queryset:
+            queryset.delete()
+            return Response({"deleted object": True})
+        else:
+            return Response({"ok": False, 'data': "The information in the id you provided is not available"})

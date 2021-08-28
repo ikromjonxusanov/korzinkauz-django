@@ -4,7 +4,7 @@ from rest_framework import status
 
 class ResponseFail(Response):
     def init(self, data=""):
-        data = {"status": "fail", "data": data}
+        data = {"code":200, "error":True, "status": "fail", "result": data}
         self.init__ = super().init(data, status=status.HTTP_200_OK)
 
 
@@ -13,5 +13,6 @@ class ResponseSuccess(Response):
         if isinstance(data, Response):
             data = data.data
 
-        data = {"status": "success", "data": data}
+        data = {"code":200, "error":False, "status": "success", "result": data}
         super().init(data, status=status.HTTP_200_OK)
+

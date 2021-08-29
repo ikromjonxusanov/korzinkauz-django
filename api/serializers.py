@@ -4,7 +4,7 @@ from .models import UserModel, Product, ProductItems, Category, Order
 class UserSerializer(ModelSerializer):
     class Meta:
         model = UserModel
-        fields = ['id', 'email', "phone_number", "image", "passport_code", "user_type"]
+        fields = ['id', 'email', "first_name", 'last_name', "phone_number", "image", "passport_code", "user_type"]
 
 class UserRegistrationSerializer(Serializer):
     email = EmailField(max_length=255)

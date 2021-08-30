@@ -1,10 +1,16 @@
+import re
+from django.contrib import auth
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from api.filters import CategoryFilter, OrderFilter, ProductFilter, ProductItemsFilter, UserFilter
 from .models import Category, Order, Product, ProductItems, User, UserModel
 from .serializers import CategorySerializer, OrderSerializer, OrderSerializerGET, ProductItemsSerializer, ProductItemsSerializerGET, ProductSerializer, ProductSerializerGET, UserSerializer, UserRegistrationSerializer
 from .responses import ResponseSuccess, ResponseFail
 from .paginations import CustomPagination
 from rest_framework.viewsets import ViewSet
-
+from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import authenticate, login, logout
+from rest_framework.authtoken.models import Token
 # Create your views here.
 def get_object_or_None(model, pk: int):
     try:
@@ -12,6 +18,32 @@ def get_object_or_None(model, pk: int):
     except:
         return None
 
+class LoginView(APIView):
+
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        user = authenticate(email=email, password=password)
+        if user:
+            serializer = UserSerializer(user, many=False)
+            token = Token.objects.get(user=user)
+            login(request, user=user)
+            print(request.user, request.auth)
+            token, created = Token.objects.get_or_create(user=user)
+            return ResponseSuccess({'token':token.key, 'user':serializer.data})
+        else:
+            return ResponseFail({
+                "errors":"email or password fail"
+            })
+class LogoutView(APIView):
+    permission_classes = (IsAuthenticated,)
+    def delete(self, request):
+        logout(request)
+# {
+# "email":"ikromjonkhusanov06@gmail.com",
+# "password":1
+# }
+#
 class ProductsViewSet(ViewSet):
     def __init__(self, **kwargs) -> None:
         self.MODEL = Product
@@ -32,7 +64,7 @@ class ProductsViewSet(ViewSet):
             "category",
         ]
         super().__init__(**kwargs)
-
+    permission_classes = (IsAuthenticated,)
     def list(self, request):
         paginator = CustomPagination()
         paginator.page_size = 10
@@ -90,6 +122,7 @@ class ProductsItemsViewSet(ViewSet):
             "create_date_end",
         ]
         super().__init__(**kwargs)
+    permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         paginator = CustomPagination()
@@ -143,6 +176,7 @@ class CategoriesViewSet(ViewSet):
             "description"
         ]
         super().__init__(**kwargs)
+    permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         paginator = CustomPagination()
@@ -263,6 +297,7 @@ class UsersViewSet(ViewSet):
             "user_type",
         ]
         super().__init__(**kwargs)
+    permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         print(request.auth)

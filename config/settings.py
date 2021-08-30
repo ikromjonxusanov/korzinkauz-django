@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'api',
     'rest_framework',
+    'rest_framework.authtoken',
     'phonenumber_field',
     
 ]
@@ -73,6 +74,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',  
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 2,
 }

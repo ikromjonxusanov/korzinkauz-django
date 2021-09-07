@@ -26,14 +26,12 @@ class LoginView(APIView):
         user = authenticate(email=email, password=password)
         if user:
             serializer = UserSerializer(user, many=False)
-            token = Token.objects.get(user=user)
             login(request, user=user)
-            print(request.user, request.auth)
             token, created = Token.objects.get_or_create(user=user)
             return ResponseSuccess({'token':token.key, 'user':serializer.data})
         else:
             return ResponseFail({
-                "errors":"email or password fail"
+                "errors":"email or password fail",
             })
 class LogoutView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -64,7 +62,7 @@ class ProductsViewSet(ViewSet):
             "category",
         ]
         super().__init__(**kwargs)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     def list(self, request):
         paginator = CustomPagination()
         paginator.page_size = 10
@@ -122,7 +120,7 @@ class ProductsItemsViewSet(ViewSet):
             "create_date_end",
         ]
         super().__init__(**kwargs)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         paginator = CustomPagination()
@@ -176,7 +174,7 @@ class CategoriesViewSet(ViewSet):
             "description"
         ]
         super().__init__(**kwargs)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         paginator = CustomPagination()
@@ -297,7 +295,7 @@ class UsersViewSet(ViewSet):
             "user_type",
         ]
         super().__init__(**kwargs)
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         print(request.auth)

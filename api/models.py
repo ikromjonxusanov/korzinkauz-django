@@ -18,6 +18,7 @@ class CustomUserManagerModel(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("user_type", 5)
         if extra_fields.get('is_staff') is not True:
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get('is_superuser') is not True:
@@ -36,10 +37,10 @@ class UserModel(AbstractUser):
     phone_number = PhoneNumberField(unique=True, null=True, blank=True)
     passport_code = CharField(max_length=9, validators=[MinLengthValidator(9), MaxLengthValidator(9)], null=True, blank=True)
     user_type = IntegerField(choices=(
-        (1, 'user'),
-        (2, 'vendor'),
-        (3, 'accountant'),
-        (4, 'product-manager'),
+        (1, 'vendor'),
+        (2, 'accountant'),
+        (3, 'productmanager'),
+        (4, 'director'),
         (5, 'admin')
     ), default=1)
 
